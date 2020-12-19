@@ -34,7 +34,6 @@ close_price = normalize(close_price)
 test_close = close_price[split_time:]# Moved here so that EMA not present in this df and this is used only for mae
 
 close_price = add_ema(close_price, 'close_price')
-
 #open_df = open_df.drop(['200dayEMA','50dayEMA','20dayEMA'], axis=1)
 #plt.figure(figsize=(10,6))
 #plot_series(time_steps, open, start=6000)
@@ -61,57 +60,56 @@ model = tf.keras.models.Sequential([
 ])
 
 model.compile(metrics=['mae'], loss=tf.keras.losses.Huber(), optimizer='adam')
-history = model.fit(train_ds, epochs=50)
-model.save('stockMulti.h5')
+#history = model.fit(train_ds, epochs=50)
+#model.save('stockMulti.h5')
 
 model = tf.keras.models.load_model('stockMulti.h5')
 #add +1 to loop if the last value is to be taken and predict the next totally new value
 
+#Using the close price as inputs
+"""rnn_forecast = []
+for time in range(split_time-window_size, (len(close_price) - window_size)):
+    input = close_price[time:time + window_size].reshape(-1,window_size,totalVars)
+    pred_out = model.predict(input)
+    rnn_forecast = np.append(rnn_forecast, pred_out)
+rnn_forecast = rnn_forecast.reshape(-1,1)
+forecast = np.array(rnn_forecast)[:, 0]"""
+
+#Calculating EMA for predicted out
 rnn_forecast = close_price[:, 0][split_time - window_size:split_time]
-close_price_ema = close_price[:, 1:][split_time - window_size:]
+train_open_conc = close_price[:,0][:split_time-window_size].reshape(-1,1)
 #test_volume = volume[split_time - window_size:]
 for time in range((len(close_price) - split_time)):
-    close_test = rnn_forecast[time:time + window_size].reshape(-1,1)
+    close_ema = add_ema(np.concatenate([train_open_conc, rnn_forecast.reshape(-1,1)],axis=0), 'close_price')
+    close_test = close_ema[split_time+time-window_size:split_time+time].reshape(-1, totalVars)# 1 added for volume so removed here
+    input = close_test.reshape(-1, window_size, totalVars)
     #vol_test = test_volume[time:time + window_size]
-    close_price_ema_input = close_price_ema[time:time + window_size]
-    input = np.concatenate([close_test, close_price_ema_input], axis=1).reshape(-1, window_size, totalVars)
+    #input = np.concatenate([close_test, vol_test], axis=1).reshape(-1, window_size, totalVars)
     pred_out = model.predict(input)
     rnn_forecast = np.append(rnn_forecast, pred_out)
 rnn_forecast = rnn_forecast[window_size:].reshape(-1,1)
 forecast = np.array(rnn_forecast)[:, 0]
+
+#Original without Volume
+"""rnn_forecast = close_price[:, 0][split_time - window_size:split_time]
+close_price_ema = close_price[:, 1:][split_time - window_size:]
+test_volume = volume[split_time - window_size:]
+for time in range((len(close_price) - split_time)):
+    close_test = rnn_forecast[time:time + window_size].reshape(-1,1)
+    vol_test = test_volume[time:time + window_size]
+    close_price_ema_input = close_price_ema[time:time + window_size]
+    input = np.concatenate([close_test, close_price_ema_input], axis=1).reshape(-1, window_size, totalVars)
+    break
+    pred_out = model.predict(input)
+    rnn_forecast = np.append(rnn_forecast, pred_out)
+rnn_forecast = rnn_forecast[window_size:].reshape(-1,1)
+forecast = np.array(rnn_forecast)[:, 0]"""
+
 mae = tf.keras.metrics.mae(test_close.reshape(-1), forecast).numpy()
 print("mae::",mae)
 end_time = datetime.now()
 print("time_taken",end_time-start_time)
 
-#model.predict(np.expand_dims(open_price[split_time:split_time+window_size][np.newaxis], axis=-1))
-
-"""rnn_forecast = []
-for time in range(split_time-window_size, (len(open_price) - window_size)):
-    input = open_price[time:time + window_size].reshape(-1,window_size,1)
-    pred_out = model.predict(input)
-    rnn_forecast.append(pred_out)
-rnn_forecast = rnn_forecast[window_size:].reshape(-1,1)
-forecast = np.array(rnn_forecast)[:,0,0]
-
-plt.figure(figsize=(10, 6))
+"""plt.figure(figsize=(10, 6))
 plot_series(time_steps[split_time:], test_close, 'r')
 plot_series(time_steps[split_time:], forecast, 'y')"""
-
-#Calculating EMA for predicted out
-"""rnn_forecast = close_price[:, 0][split_time - window_size:split_time]
-train_open_conc = close_price[:,0][:split_time-window_size].reshape(-1,1)
-print(train_open_conc.shape)
-test_volume = volume[split_time - window_size:]
-for time in range((len(close_price) - split_time)):
-    close_ema = add_ema(np.concatenate([train_open_conc, rnn_forecast.reshape(-1,1)],axis=0), 'close_price')
-    print("Close:", close_ema.shape)
-    close_test = close_ema[split_time+time-window_size:split_time+time].reshape(-1, totalVars-1)# 1 added for volume so removed here
-    vol_test = test_volume[time:time + window_size]
-    print(close_test.shape)
-    print(vol_test.shape)
-    input = np.concatenate([close_test, vol_test], axis=1).reshape(-1, window_size, totalVars)
-    pred_out = model.predict(input)
-    rnn_forecast = np.append(rnn_forecast, pred_out)
-rnn_forecast = rnn_forecast[window_size:].reshape(-1,1)
-forecast = np.array(rnn_forecast)[:, 0]"""
