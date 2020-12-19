@@ -2,4 +2,4 @@ venv
 venv/*
 .idea
 .ipynb_checkpoints
-tflow/__pycache__/*
+**/__pycache__
