@@ -28,8 +28,8 @@ with open(r'D:/Downloads/500790.csv') as file:
 
 time_steps = np.array(time_steps)
 close_price = np.array(close_price).reshape(-1, 1)
-volume = np.array(volume).reshape(-1, 1)
-volume = normalize(volume)
+#volume = np.array(volume).reshape(-1, 1)
+#volume = normalize(volume)
 close_price = normalize(close_price)
 test_close = close_price[split_time:]# Moved here so that EMA not present in this df and this is used only for mae
 
