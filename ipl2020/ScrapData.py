@@ -39,8 +39,11 @@ def getCommentary(url):
 
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser').find(class_='match-body')
-    comment = soup.findAll(class_='match-comment')[-1]
-    print(comment)
+    comments = soup.findAll(class_='match-comment')
+    for comment in comments:
+        over = comment.find(class_='match-comment-over').text
+        short_text = comment.find(class_='match-comment-short-text').text
+        long_text = comment.find("div", {"class": "match-comment-long-text", "itemprop":"articleBody"}).text
 
 if __name__ == '__main__':
     commentaryUrls = geturls()
