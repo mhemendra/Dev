@@ -76,39 +76,46 @@ rnn_forecast = rnn_forecast.reshape(-1,1)
 forecast = np.array(rnn_forecast)[:, 0]"""
 
 #Calculating EMA for predicted out
+min_max_long = [-0.02664521796316971, 0.09861810934800397]
+min_max_short = [-0.022278188867550397, 0.04288502990299048]
 rnn_forecast = close_price[:, 0][split_time - window_size:split_time]
 train_open_conc = close_price[:,0][:split_time-window_size].reshape(-1,1)
-#test_volume = volume[split_time - window_size:]
 for time in range((len(close_price) - split_time)):
-    close_ema = add_ema(np.concatenate([train_open_conc, rnn_forecast.reshape(-1,1)],axis=0), 'close_price')
+    close_ema = add_ema(np.concatenate([train_open_conc, rnn_forecast.reshape(-1,1)],axis=0), 'close_price', min_max_long, min_max_short)
     close_test = close_ema[split_time+time-window_size:split_time+time].reshape(-1, totalVars)# 1 added for volume so removed here
     input = close_test.reshape(-1, window_size, totalVars)
-    #vol_test = test_volume[time:time + window_size]
-    #input = np.concatenate([close_test, vol_test], axis=1).reshape(-1, window_size, totalVars)
     pred_out = model.predict(input)
     rnn_forecast = np.append(rnn_forecast, pred_out)
 rnn_forecast = rnn_forecast[window_size:].reshape(-1,1)
 forecast = np.array(rnn_forecast)[:, 0]
 
-#Original without Volume
-"""rnn_forecast = close_price[:, 0][split_time - window_size:split_time]
+mae = tf.keras.metrics.mae(test_close.reshape(-1), forecast).numpy()
+mse = tf.keras.metrics.mean_squared_logarithmic_error(test_close.reshape(-1), forecast).numpy()
+
+print("Calculated EMA's")
+print("mae for::",mae)
+print("mse for::",mse)
+
+#Original with EMA from data
+rnn_forecast = close_price[:, 0][split_time - window_size:split_time]
 close_price_ema = close_price[:, 1:][split_time - window_size:]
-test_volume = volume[split_time - window_size:]
+#test_volume = volume[split_time - window_size:]
 for time in range((len(close_price) - split_time)):
     close_test = rnn_forecast[time:time + window_size].reshape(-1,1)
-    vol_test = test_volume[time:time + window_size]
+    #vol_test = test_volume[time:time + window_size]
     close_price_ema_input = close_price_ema[time:time + window_size]
     input = np.concatenate([close_test, close_price_ema_input], axis=1).reshape(-1, window_size, totalVars)
-    break
     pred_out = model.predict(input)
     rnn_forecast = np.append(rnn_forecast, pred_out)
 rnn_forecast = rnn_forecast[window_size:].reshape(-1,1)
-forecast = np.array(rnn_forecast)[:, 0]"""
+forecast = np.array(rnn_forecast)[:, 0]
 
 mae = tf.keras.metrics.mae(test_close.reshape(-1), forecast).numpy()
-print("mae::",mae)
-end_time = datetime.now()
-print("time_taken",end_time-start_time)
+mse = tf.keras.metrics.mean_squared_logarithmic_error(test_close.reshape(-1), forecast).numpy()
+
+print("Original EMA's")
+print("mae for::",mae)
+print("mse for::",mse)
 
 """plt.figure(figsize=(10, 6))
 plot_series(time_steps[split_time:], test_close, 'r')
