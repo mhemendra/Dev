@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import pandas as pd
 
 def geturls():
     homepage = 'https://www.espncricinfo.com/series/ipl-2020-21-1210595/match-results'
@@ -36,14 +37,27 @@ def getCommentary(url):
         if new_height == last_height:
             break
         last_height = new_height
-
+    i = 0
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser').find(class_='match-body')
     comments = soup.findAll(class_='match-comment')
+    overs = []
+    short_texts = []
+    long_texts =[]
     for comment in comments:
         over = comment.find(class_='match-comment-over').text
         short_text = comment.find(class_='match-comment-short-text').text
         long_text = comment.find("div", {"class": "match-comment-long-text", "itemprop":"articleBody"}).text
+        overs.append(over)
+        short_texts.append(short_text)
+        long_texts.append(long_text)
+
+    commentary_data = pd.DataFrame({
+        "over":overs,
+        "short_text":short_texts,
+        "long_text":long_texts
+    })
+    commentary_data.to_csv(r'C:\Users\mheme\Desktop\commentary_data.csv', index = None, header=True)
 
 if __name__ == '__main__':
     commentaryUrls = geturls()
