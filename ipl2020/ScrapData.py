@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import pandas as pd
+from selenium import webdriver
 
 def geturls():
     homepage = 'https://www.espncricinfo.com/series/ipl-2020-21-1210595/match-results'
@@ -15,17 +16,8 @@ def geturls():
         commentaryUrls.append(url)
     return commentaryUrls
 
-def getCommentary(url):
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    #opts = Options()
-    #opts.add_argument('- headless') scroll doesnt work with headless
-    chrome_driver = r'D:\Downloads\chromedriver\chromedriver.exe'
-    driver = webdriver.Chrome(executable_path=chrome_driver)
+def convert_pd(driver):
     SCROLL_PAUSE_TIME = 0.5
-
-    driver.get(url)
-    # Get scroll height
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         # Scroll down to bottom
@@ -37,7 +29,6 @@ def getCommentary(url):
         if new_height == last_height:
             break
         last_height = new_height
-    i = 0
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser').find(class_='match-body')
     comments = soup.findAll(class_='match-comment')
@@ -47,7 +38,11 @@ def getCommentary(url):
     for comment in comments:
         over = comment.find(class_='match-comment-over').text
         short_text = comment.find(class_='match-comment-short-text').text
-        long_text = comment.find("div", {"class": "match-comment-long-text", "itemprop":"articleBody"}).text
+        long_data = comment.find("div", {"class": "match-comment-long-text", "itemprop":"articleBody"})
+        if long_data is None:
+            long_text = ""
+        else:
+            long_text = long_data.text
         overs.append(over)
         short_texts.append(short_text)
         long_texts.append(long_text)
@@ -57,9 +52,42 @@ def getCommentary(url):
         "short_text":short_texts,
         "long_text":long_texts
     })
-    commentary_data.to_csv(r'C:\Users\mheme\Desktop\commentary_data.csv', index = None, header=True)
+    return commentary_data
+
+def getMatchCommentary(url):
+
+    driver.get(url)
+    #Adding below line to handle super overs, Super over is actually li[3] so li[2] selects second innings as usual
+    driver.find_element_by_xpath(
+        "//section[@id='main-container']/div/div[2]/div[2]/div/div[2]/div/div/div/button/i").click()
+    driver.find_element_by_xpath(
+        "//section[@id='main-container']/div/div[2]/div[2]/div/div[2]/div/div/div/div/ul/li[2]").click()
+
+    # Get scroll height
+    commentary_data_first = convert_pd(driver)
+    driver.execute_script("window.scrollTo(0, -document.body.scrollHeight);")
+
+    driver.find_element_by_xpath(
+        "//section[@id='main-container']/div/div[2]/div[2]/div/div[2]/div/div/div/button/i").click()
+    try:
+        driver.find_element_by_xpath(
+        "//section[@id='main-container']/div/div[2]/div[2]/div/div[2]/div/div/div/div/ul/li").click()
+    except:
+        driver.find_element_by_xpath(
+            "//section[@id='main-container']/div/div[2]/div[2]/div/div[2]/div/div/div/div/ul/li[2]/span").click()
+    finally:
+        print('Inside Finally')
+    commentary_data_second = convert_pd(driver)
+    commentary_data = pd.concat([commentary_data_first, commentary_data_second], axis=0)
+    return commentary_data
 
 if __name__ == '__main__':
+    chrome_driver = r'D:\Downloads\chromedriver\chromedriver.exe'
+    driver = webdriver.Chrome(executable_path=chrome_driver)
+    mainDF = pd.DataFrame(columns=["over", "short_text", "long_text"])
     commentaryUrls = geturls()
-    testUrl = commentaryUrls[-1]
-    commentary = getCommentary(testUrl)
+    for url in commentaryUrls:
+        commentary = getMatchCommentary(url)
+        mainDF = pd.concat([mainDF, commentary], axis=0)
+    driver.quit()
+    mainDF.to_csv(r'C:\Users\mheme\Desktop\commentary_data.csv', index = None, header=True)
