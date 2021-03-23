@@ -5,7 +5,8 @@ import pandas as pd
 from selenium import webdriver
 
 def geturls():
-    homepage = 'https://www.espncricinfo.com/series/ipl-2020-21-1210595/match-results'
+    #homepage = 'https://www.espncricinfo.com/series/ipl-2020-21-1210595/match-results'
+    homepage = 'https://www.espncricinfo.com/series/ipl-2019-1165643/match-results'
     page = requests.get(homepage)
     soup = BeautifulSoup(page.content, 'html.parser')
     fixtures = soup.find(class_='card content-block league-scores-container').findAll(class_='match-info-link-FIXTURES')
@@ -75,8 +76,6 @@ def getMatchCommentary(url):
     except:
         driver.find_element_by_xpath(
             "//section[@id='main-container']/div/div[2]/div[2]/div/div[2]/div/div/div/div/ul/li[2]/span").click()
-    finally:
-        print('Inside Finally')
     commentary_data_second = convert_pd(driver)
     commentary_data = pd.concat([commentary_data_first, commentary_data_second], axis=0)
     return commentary_data
@@ -85,6 +84,7 @@ if __name__ == '__main__':
     chrome_driver = r'D:\Downloads\chromedriver\chromedriver.exe'
     driver = webdriver.Chrome(executable_path=chrome_driver)
     mainDF = pd.DataFrame(columns=["over", "short_text", "long_text"])
+    #commentaryUrls = ["https://www.espncricinfo.com/series/ipl-2019-1165643/chennai-super-kings-vs-royal-challengers-bangalore-1st-match-1175356/ball-by-ball-commentary"]
     commentaryUrls = geturls()
     for url in commentaryUrls:
         commentary = getMatchCommentary(url)
