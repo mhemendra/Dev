@@ -6,7 +6,8 @@ from selenium import webdriver
 
 def geturls():
     #homepage = 'https://www.espncricinfo.com/series/ipl-2020-21-1210595/match-results'
-    homepage = 'https://www.espncricinfo.com/series/ipl-2019-1165643/match-results'
+    #homepage = 'https://www.espncricinfo.com/series/ipl-2019-1165643/match-results'
+    homepage='https://www.espncricinfo.com/series/ipl-2018-1131611/match-results'
     page = requests.get(homepage)
     soup = BeautifulSoup(page.content, 'html.parser')
     fixtures = soup.find(class_='card content-block league-scores-container').findAll(class_='match-info-link-FIXTURES')
